@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>SunWin AI Predictor PRO</title>
+
+<style>
+:root{
+  --primary:#00f2ff;
+  --bg:rgba(10,10,15,.96);
+  --win:#00ff88;
+  --lose:#ff4d4d;
+}
+*{box-sizing:border-box;font-family:Roboto,Arial}
+body{margin:0;overflow:hidden;background:#000}
+
+/* GAME */
+iframe{
+  position:fixed;inset:0;
+  width:100vw;height:100vh;border:none;z-index:1;
+}
+
+/* ROBOT */
+#robotUI{
+  position:fixed;top:80px;left:20px;
+  display:flex;gap:14px;z-index:9999;
+  touch-action:none;
+  transition:opacity 0.3s;
+}
+#robotUI.hidden{opacity:0;pointer-events:none}
+#robotUI img{
+  width:80px;cursor:grab;
+  filter:drop-shadow(0 0 12px var(--primary));
+  animation:float 3s ease-in-out infinite;
+}
+
+.panel{
+  background:var(--bg);
+  border:1px solid var(--primary);
+  border-radius:14px;
+  padding:12px 16px;
+  min-width:260px;
+  box-shadow:0 0 22px rgba(0,242,255,.25);
+  backdrop-filter:blur(10px);
+}
+.row{margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.06)}
+.row:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.label{font-size:10px;color:#aaa;text-transform:uppercase;letter-spacing:0.5px}
+.value{font-size:15px;font-weight:bold;color:#fff;margin-top:4px}
+.big{font-size:19px;color:var(--primary);text-shadow:0 0 10px var(--primary)}
+.type{color:#ffeb3b;font-style:italic}
+.percent{color:var(--win);font-weight:bold}
+
+/* HISTORY */
+#historyPanel{
+  background:var(--bg);
+  border:2px solid var(--primary);
+  border-radius:16px;
+  padding:20px;
+  width:90vw;
+  max-width:600px;
+  max-height:70vh;
+  overflow-y:auto;
+  backdrop-filter:blur(20px);
+  box-shadow:0 0 40px rgba(0,242,255,.4);
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  z-index:99999;
+  display:none;
+}
+#historyPanel.active{
+  display:block;
+  animation:zoomIn 0.3s ease;
+}
+#historyOverlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.8);
+  z-index:99998;
+  display:none;
+}
+#historyOverlay.active{
+  display:block;
+  animation:fadeIn 0.3s ease;
+}
+.history-title{
+  color:var(--primary);
+  font-size:18px;
+  font-weight:bold;
+  margin-bottom:16px;
+  text-transform:uppercase;
+  letter-spacing:1.5px;
+  text-align:center;
+  border-bottom:2px solid rgba(0,242,255,.5);
+  padding-bottom:12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.history-stats{
+  display:flex;
+  gap:20px;
+  justify-content:center;
+  margin-bottom:16px;
+  padding:12px;
+  background:rgba(0,242,255,.05);
+  border-radius:8px;
+}
+.stat-item{
+  text-align:center;
+}
+.stat-label{
+  font-size:11px;
+  color:#aaa;
+  text-transform:uppercase;
+}
+.stat-value{
+  font-size:24px;
+  font-weight:bold;
+  margin-top:4px;
+}
+.stat-value.total{color:var(--primary)}
+.stat-value.win{color:var(--win)}
+.stat-value.lose{color:var(--lose)}
+.stat-value.rate{color:#ffeb3b}
+.close-history{
+  background:none;
+  border:none;
+  color:#fff;
+  font-size:24px;
+  cursor:pointer;
+  padding:0;
+  width:30px;
+  height:30px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:all 0.3s;
+}
+.close-history:hover{
+  color:var(--lose);
+  transform:rotate(90deg);
+}
+.hist-item{
+  display:grid;
+  grid-template-columns:80px 1fr 1fr 60px;
+  gap:12px;
+  align-items:center;
+  font-size:14px;
+  margin-bottom:10px;
+  padding:12px;
+  background:rgba(255,255,255,.05);
+  border-radius:8px;
+  border-left:4px solid transparent;
+  transition:all 0.3s;
+}
+.hist-item:hover{
+  background:rgba(255,255,255,.08);
+  transform:translateX(4px);
+}
+.hist-item.win{border-left-color:var(--win);background:rgba(0,255,136,.05)}
+.hist-item.lose{border-left-color:var(--lose);background:rgba(255,77,77,.05)}
+.hist-phien{
+  color:var(--primary);
+  font-size:13px;
+  font-weight:bold;
+}
+.hist-predict{
+  color:#fff;
+  font-weight:bold;
+  font-size:15px;
+}
+.hist-result{
+  color:var(--primary);
+  font-weight:bold;
+  font-size:15px;
+}
+.hist-status{
+  font-size:28px;
+  text-align:center;
+}
+.hist-status.win{color:var(--win)}
+.hist-status.lose{color:var(--lose)}
+
+/* CONTROLS */
+#controls{
+  position:fixed;bottom:20px;left:20px;
+  display:flex;flex-direction:column;gap:10px;
+  z-index:10000;
+}
+.ctrl-btn{
+  width:56px;height:56px;border-radius:50%;
+  border:2px solid var(--primary);
+  background:#111;color:#fff;
+  font-size:22px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 15px rgba(0,242,255,.3);
+  transition:all 0.3s;
+  user-select:none;
+}
+.ctrl-btn:hover{
+  background:#1a1a1a;
+  border-color:#00ffff;
+  transform:scale(1.05);
+}
+.ctrl-btn:active{
+  transform:scale(0.95);
+  box-shadow:0 2px 8px rgba(0,242,255,.5);
+}
+
+/* RESPONSIVE */
+@media (max-width:768px){
+  #robotUI{
+    top:60px;left:10px;gap:10px;
+    flex-direction:column;
+    align-items:flex-start;
+  }
+  #robotUI img{width:60px}
+  .panel{min-width:200px;padding:10px 12px}
+  .big{font-size:16px}
+  .value{font-size:13px}
+  #controls{bottom:15px;left:15px;gap:8px}
+  .ctrl-btn{width:50px;height:50px;font-size:20px}
+  #historyPanel{
+    width:95vw;
+    max-height:80vh;
+    padding:16px;
+  }
+  .history-title{font-size:16px}
+  .history-stats{gap:12px;padding:10px}
+  .stat-value{font-size:20px}
+  .hist-item{
+    grid-template-columns:70px 1fr 1fr 50px;
+    gap:8px;
+    padding:10px;
+  }
+  .hist-phien{font-size:12px}
+  .hist-predict,.hist-result{font-size:13px}
+  .hist-status{font-size:24px}
+}
+
+@keyframes float{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-10px)}
+}
+
+@keyframes zoomIn{
+  from{opacity:0;transform:translate(-50%,-50%) scale(0.8)}
+  to{opacity:1;transform:translate(-50%,-50%) scale(1)}
+}
+
+@keyframes fadeIn{
+  from{opacity:0}
+  to{opacity:1}
+}
+
+/* SCROLLBAR */
+#historyPanel::-webkit-scrollbar{width:6px}
+#historyPanel::-webkit-scrollbar-track{background:rgba(255,255,255,.05);border-radius:3px}
+#historyPanel::-webkit-scrollbar-thumb{background:var(--primary);border-radius:3px}
+
+/* ══════════════════════════════════
+   KEY LOGIN SCREEN
+══════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap');
+
+#loginScreen{
+  position:fixed;inset:0;z-index:999999;
+  background:#000;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;font-family:'Share Tech Mono',monospace;
+}
+#loginScreen.ls-exit{
+  animation:lsFadeOut .55s cubic-bezier(.4,0,1,1) forwards;
+  pointer-events:none;
+}
+#loginScreen.ls-gone{display:none;}
+@keyframes lsFadeOut{to{opacity:0;transform:scale(1.03);}}
+
+/* — Background — */
+.ls-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
+.ls-orb-a{
+  position:absolute;border-radius:50%;filter:blur(90px);
+  width:560px;height:560px;
+  background:radial-gradient(circle,rgba(0,242,255,.09) 0%,transparent 68%);
+  top:-220px;left:50%;transform:translateX(-50%);
+  animation:lsOrb 8s ease-in-out infinite;
+}
+.ls-orb-b{
+  position:absolute;border-radius:50%;filter:blur(70px);
+  width:280px;height:280px;
+  background:radial-gradient(circle,rgba(0,255,136,.06) 0%,transparent 65%);
+  bottom:-80px;right:-60px;
+  animation:lsOrb 10s ease-in-out infinite reverse;
+}
+@keyframes lsOrb{0%,100%{opacity:.7;}50%{opacity:1;}}
+.ls-grid{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(0,242,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,242,255,.025) 1px,transparent 1px);
+  background-size:54px 54px;
+  mask-image:radial-gradient(ellipse 65% 65% at 50% 50%,black 25%,transparent 100%);
+}
+.ls-sweep{
+  position:absolute;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent 0%,rgba(0,242,255,.25) 35%,rgba(0,242,255,.55) 50%,rgba(0,242,255,.25) 65%,transparent 100%);
+  animation:lsSweep 5.5s linear infinite;pointer-events:none;
+}
+@keyframes lsSweep{0%{top:-1px;opacity:0;}4%{opacity:1;}92%{opacity:1;}100%{top:100%;opacity:0;}}
+
+/* — Card — */
+.ls-wrap{
+  position:relative;z-index:2;
+  width:100%;max-width:355px;
+  animation:lsCardIn .75s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes lsCardIn{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:none;}}
+
+.ls-eyebrow{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:22px;
+}
+.ls-eline{
+  height:1px;flex:1;
+  background:linear-gradient(90deg,transparent,rgba(0,242,255,.3));
+}
+.ls-eline.r{background:linear-gradient(270deg,transparent,rgba(0,242,255,.3));}
+.ls-etxt{
+  font-size:9px;color:rgba(0,242,255,.45);
+  letter-spacing:5px;text-transform:uppercase;white-space:nowrap;
+}
+
+.ls-card{
+  background:rgba(8,10,16,.98);
+  border:1px solid rgba(0,242,255,.16);
+  border-radius:22px;
+  padding:34px 28px 26px;
+  position:relative;overflow:hidden;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,.5) inset,
+    0 0 50px rgba(0,242,255,.06),
+    0 28px 70px rgba(0,0,0,.65);
+  backdrop-filter:blur(40px);
+}
+/* top shimmer */
+.ls-card::before{
+  content:'';position:absolute;top:0;left:18%;right:18%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,242,255,.45),transparent);
+}
+/* inner glow */
+.ls-card::after{
+  content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(155deg,rgba(0,242,255,.025) 0%,transparent 55%);
+}
+
+/* — Icon — */
+.ls-icon{
+  width:60px;height:60px;margin:0 auto 18px;
+  position:relative;display:flex;align-items:center;justify-content:center;
+}
+.ls-icon-c{
+  position:absolute;inset:0;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,242,255,.1),transparent 70%);
+  border:1px solid rgba(0,242,255,.2);
+  animation:lsPulse 3s ease-in-out infinite;
+}
+.ls-icon-r{
+  position:absolute;inset:-9px;border-radius:50%;
+  border:1px dashed rgba(0,242,255,.1);
+  animation:lsRotate 16s linear infinite;
+}
+@keyframes lsPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,242,255,.1);}50%{box-shadow:0 0 0 9px rgba(0,242,255,0);}}
+@keyframes lsRotate{to{transform:rotate(360deg);}}
+
+.ls-hd{text-align:center;margin-bottom:28px;}
+.ls-hd h2{
+  font-family:'Orbitron',sans-serif;
+  font-size:19px;font-weight:900;color:#fff;
+  letter-spacing:4px;text-transform:uppercase;line-height:1.1;margin:0 0 6px;
+}
+.ls-hd h2 em{color:var(--primary);font-style:normal;}
+.ls-hd small{
+  font-size:9px;color:rgba(255,255,255,.18);
+  letter-spacing:5px;text-transform:uppercase;
+}
+
+/* — Input — */
+.ls-flabel{
+  display:block;
+  font-size:9px;color:rgba(255,255,255,.22);
+  letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;
+}
+.ls-fg{position:relative;margin-bottom:10px;}
+.ls-inp{
+  width:100%;
+  background:rgba(0,0,0,.55);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:12px;
+  padding:13px 44px 13px 16px;
+  color:#fff;font-size:17px;letter-spacing:5px;
+  outline:none;transition:all .25s;
+  caret-color:var(--primary);
+  font-family:'Share Tech Mono',monospace;
+}
+.ls-inp:focus{
+  border-color:rgba(0,242,255,.35);
+  background:rgba(0,242,255,.03);
+  box-shadow:0 0 0 3px rgba(0,242,255,.06),0 0 18px rgba(0,242,255,.04);
+}
+.ls-inp::placeholder{color:rgba(255,255,255,.09);letter-spacing:2px;font-size:12px;}
+.ls-xclear{
+  position:absolute;right:13px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;padding:4px;
+  color:rgba(255,255,255,.13);transition:color .2s;
+  display:flex;align-items:center;
+}
+.ls-xclear:hover{color:rgba(0,242,255,.45);}
+
+/* dots */
+.ls-dots{
+  display:flex;gap:6px;justify-content:center;
+  margin-bottom:18px;
+}
+.ls-d{
+  width:7px;height:7px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.1);
+  transition:all .14s;flex-shrink:0;
+}
+.ls-d.on{
+  background:var(--primary);border-color:var(--primary);
+  box-shadow:0 0 9px rgba(0,242,255,.55);
+}
+
+/* — Button — */
+.ls-btn{
+  width:100%;border:none;border-radius:12px;padding:14px;
+  background:linear-gradient(135deg,#00e5ff 0%,#00acc1 50%,#0097a7 100%);
+  background-size:200% auto;
+  color:#000;font-family:'Orbitron',sans-serif;
+  font-size:12px;font-weight:900;letter-spacing:4px;
+  cursor:pointer;transition:transform .25s,box-shadow .25s;
+  position:relative;overflow:hidden;
+  box-shadow:0 4px 22px rgba(0,242,255,.2);
+  animation:lsShimmer 3s linear infinite;
+}
+@keyframes lsShimmer{to{background-position:200% center;}}
+.ls-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,242,255,.38);}
+.ls-btn:active:not(:disabled){transform:translateY(0);}
+.ls-btn:disabled{opacity:.45;cursor:not-allowed;animation:none;}
+.ls-btn.ld{color:transparent;pointer-events:none;}
+.ls-btn.ld::after{
+  content:'';position:absolute;top:50%;left:50%;
+  width:16px;height:16px;margin:-8px;
+  border:2px solid rgba(0,0,0,.2);border-top-color:#000;
+  border-radius:50%;animation:lsSpin .55s linear infinite;
+}
+@keyframes lsSpin{to{transform:rotate(360deg);}}
+
+/* — Feedback — */
+.ls-msg{
+  display:none;margin-top:12px;border-radius:10px;
+  padding:10px 14px;font-size:11px;text-align:center;letter-spacing:.5px;
+}
+.ls-msg.show{display:block;animation:lsCardIn .3s ease;}
+.ls-err{background:rgba(255,77,77,.06);border:1px solid rgba(255,77,77,.18);color:#ff7070;}
+.ls-ok {background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);color:#00ff88;}
+
+.ls-info{
+  display:none;margin-top:12px;
+  background:rgba(0,242,255,.04);border:1px solid rgba(0,242,255,.12);
+  border-radius:11px;padding:12px 14px;
+}
+.ls-info.show{display:block;animation:lsCardIn .35s ease;}
+.ls-info-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);
+}
+.ls-info-row:last-child{border:none;padding-bottom:0;}
+.ls-info-row .lk{font-size:9px;color:rgba(255,255,255,.22);letter-spacing:2px;text-transform:uppercase;}
+.ls-info-row .lv{font-size:11px;color:var(--win);font-weight:700;font-family:'Share Tech Mono',monospace;}
+
+.ls-foot{
+  text-align:center;margin-top:16px;
+  font-size:9px;color:rgba(255,255,255,.07);letter-spacing:2px;
+}
+
+@keyframes lsShake{
+  0%,100%{transform:translateX(0);}
+  20%{transform:translateX(-7px);}40%{transform:translateX(7px);}
+  60%{transform:translateX(-4px);}80%{transform:translateX(4px);}
+}
+
+</style>
+</head>
+
+<body>
+
+
+<!-- ══════════════════ KEY LOGIN ══════════════════ -->
+<div id="loginScreen">
+  <div class="ls-bg">
+    <div class="ls-orb-a"></div>
+    <div class="ls-orb-b"></div>
+    <div class="ls-grid"></div>
+    <div class="ls-sweep"></div>
+  </div>
+
+  <div class="ls-wrap">
+    <div class="ls-eyebrow">
+      <div class="ls-eline"></div>
+      <div class="ls-etxt">SunWin AI System</div>
+      <div class="ls-eline r"></div>
+    </div>
+
+    <div class="ls-card">
+      <div class="ls-icon">
+        <div class="ls-icon-c"></div>
+        <div class="ls-icon-r"></div>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00f2ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="15" r="4"/><path d="M12 15h8M16 11v8"/>
+        </svg>
+      </div>
+
+      <div class="ls-hd">
+        <h2>ĐĂNG <em>NHẬP</em></h2>
+        <small>NHẬP KEY ĐỂ TIẾP TỤC</small>
+      </div>
+
+      <label class="ls-flabel">Key truy cập</label>
+      <div class="ls-fg">
+        <input class="ls-inp" id="lsInp" type="text"
+          placeholder="Nhập key của bạn..."
+          maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false"
+          oninput="lsType(this)" onkeydown="if(event.key==='Enter')lsVerify()"/>
+        <button class="ls-xclear" onclick="lsClear()" tabindex="-1">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="ls-dots" id="lsDots">
+        <div class="ls-d" id="dd0"></div><div class="ls-d" id="dd1"></div>
+        <div class="ls-d" id="dd2"></div><div class="ls-d" id="dd3"></div>
+        <div class="ls-d" id="dd4"></div><div class="ls-d" id="dd5"></div>
+        <div class="ls-d" id="dd6"></div><div class="ls-d" id="dd7"></div>
+        <div class="ls-d" id="dd8"></div><div class="ls-d" id="dd9"></div>
+      </div>
+
+      <button class="ls-btn" id="lsBtn" onclick="lsVerify()">VÀO TOOL</button>
+
+      <div class="ls-msg ls-err" id="lsErr"></div>
+      <div class="ls-msg ls-ok"  id="lsOk"></div>
+
+      <div class="ls-info" id="lsInfo">
+        <div class="ls-info-row"><span class="lk">Tên</span><span class="lv" id="li-n">—</span></div>
+        <div class="ls-info-row"><span class="lk">Loại</span><span class="lv" id="li-t">—</span></div>
+        <div class="ls-info-row"><span class="lk">Hết hạn</span><span class="lv" id="li-e">—</span></div>
+      </div>
+    </div>
+
+    <div class="ls-foot" id="lsFoot">DEVICE: —</div>
+  </div>
+</div>
+
+<iframe src="https://web.sunwin.pw/?affId=Sunwin"></iframe>
+
+<!-- ROBOT -->
+<div id="robotUI">
+  <img src="https://i.postimg.cc/1zLnNsCZ/IMG-3575.gif" draggable="false">
+  <div class="panel">
+    <div class="row">
+      <div class="label">Phiên dự đoán</div>
+      <div class="value" id="phien">---</div>
+    </div>
+    <div class="row">
+      <div class="label">Dự đoán AI</div>
+      <div class="value big" id="predict">ĐANG PHÂN TÍCH</div>
+    </div>
+    <div class="row">
+      <div class="label">Loại cầu</div>
+      <div class="value type" id="cau">---</div>
+    </div>
+    <div class="row">
+      <div class="label">Độ tin cậy</div>
+      <div class="value percent" id="percent">0%</div>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY OVERLAY -->
+<div id="historyOverlay"></div>
+
+<!-- HISTORY PANEL -->
+<div id="historyPanel">
+  <div class="history-title">
+    <span>📊 LỊCH SỬ DỰ ĐOÁN</span>
+    <button class="close-history" id="closeHistory">✕</button>
+  </div>
+  <div class="history-stats">
+    <div class="stat-item">
+      <div class="stat-label">Tổng phiên</div>
+      <div class="stat-value total" id="statTotal">0</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Thắng</div>
+      <div class="stat-value win" id="statWin">0</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Thua</div>
+      <div class="stat-value lose" id="statLose">0</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Tỷ lệ</div>
+      <div class="stat-value rate" id="statRate">0%</div>
+    </div>
+  </div>
+  <div id="historyList"></div>
+</div>
+
+<!-- CONTROLS -->
+<div id="controls">
+  <button class="ctrl-btn" id="btnHistory" title="Lịch sử">📜</button>
+  <button class="ctrl-btn" id="btnRobot" title="Ẩn/Hiện Robot">👁️</button>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const API="http://178.128.100.72:3001/api/ditmemaysun";
+
+/* ================= STATE ================= */
+let lastResultPhien=null;
+let predictedPhien=null;
+let pendingPredict=null;
+
+/* ================= PATTERN DETECTION ================= */
+function analyzeSignal(history){
+  if(!history) return { cmd: "...", pct: 0, type: "Đang chờ dữ liệu" };
+  
+  const s = history.toUpperCase();
+  const len = s.length;
+  const last = s[len - 1];
+  
+  // Helper: Đếm chuỗi liên tiếp cuối cùng
+  let streak = 0;
+  for(let i = len - 1; i >= 0; i--) {
+    if(s[i] === last) streak++;
+    else break;
+  }
+
+  // --- THUẬT TOÁN MATRIX 4.0 (Khắc chế Gãy Cầu) ---
+
+  // 1. Cầu Bệt (Dragon) - Xử lý thông minh
+  if (streak >= 3) {
+    if (streak >= 6) {
+      // Bệt quá dài (>=6) -> Dễ gãy -> Bẻ cầu
+      return { 
+        cmd: last === 'T' ? 'XỈU' : 'TÀI', 
+        pct: 85, 
+        type: `Bẻ Rồng (Dây ${streak})` 
+      };
+    }
+    // Bệt 3-5 -> Đang đà -> Theo cầu
+    return { 
+      cmd: last === 'T' ? 'TÀI' : 'XỈU', 
+      pct: 90 + (streak * 2), 
+      type: `Theo Rồng (Dây ${streak})` 
+    };
+  }
+
+  // 2. Cầu Hồi (Rebound) - Khi vừa gãy cầu bệt
+  // Ví dụ: TTTTX -> Dự đoán hồi lại T (Cầu lừa)
+  if (len >= 5) {
+    const prevStreakChar = s[len-2];
+    // Check ngược lại xem trước đó có phải bệt không
+    let pStreak = 0;
+    for(let i = len - 2; i >= 0; i--) {
+      if(s[i] === prevStreakChar) pStreak++;
+      else break;
+    }
+    
+    if (pStreak >= 4 && s[len-1] !== prevStreakChar) {
+      // Vừa gãy cầu dài -> Đánh hồi lại màu cũ
+      return {
+        cmd: prevStreakChar === 'T' ? 'TÀI' : 'XỈU',
+        pct: 82,
+        type: 'Cầu Hồi Mã Thương'
+      };
+    }
+  }
+
+  // 3. Cầu 1-1 (Ping Pong)
+  if (len >= 3 && s[len-1] !== s[len-2] && s[len-2] !== s[len-3]) {
+    // Nếu đi 1-1 quá dài (>5 tay) -> Dễ gãy thành 1-2 -> Bẻ
+    let ppLen = 0;
+    for(let i = len - 1; i > 0; i--) {
+      if(s[i] !== s[i-1]) ppLen++;
+      else break;
+    }
+    if (ppLen >= 5) {
+       return { cmd: last === 'T' ? 'TÀI' : 'XỈU', pct: 75, type: 'Bẻ Cầu 1-1' };
+    }
+    return { 
+      cmd: last === 'T' ? 'XỈU' : 'TÀI', 
+      pct: 88, 
+      type: 'Cầu Chuyền 1-1' 
+    };
+  }
+
+  // 4. Cầu 2-2 và Biến thể
+  if (len >= 4) {
+    const tail = s.slice(-3);
+    if (tail === 'TTX') return { cmd: 'XỈU', pct: 80, type: 'Cầu 2-2 (Khuyết)' };
+    if (tail === 'XXT') return { cmd: 'TÀI', pct: 80, type: 'Cầu 2-2 (Khuyết)' };
+    if (tail === 'TXX') return { cmd: 'TÀI', pct: 78, type: 'Cầu 1-2-3 (Mầm)' };
+    if (tail === 'XTT') return { cmd: 'XỈU', pct: 78, type: 'Cầu 1-2-3 (Mầm)' };
+  }
+
+  // 5. Thuật toán Cân Bằng Lực (Force Balance)
+  const last10 = s.slice(-10);
+  const tCount = (last10.match(/T/g) || []).length;
+  const xCount = (last10.match(/X/g) || []).length;
+  
+  if (Math.abs(tCount - xCount) >= 4) {
+    // Chênh lệch lớn -> Đánh cửa ít hơn để cân bằng
+    return { 
+      cmd: tCount > xCount ? 'XỈU' : 'TÀI', 
+      pct: 70, 
+      type: 'Cân Bằng Lực' 
+    };
+  }
+
+  // 6. Cầu Loạn (Chaos) - Soi bóng
+  if (len >= 3 && last === s[len-3]) { 
+     return {
+       cmd: last === 'T' ? 'TÀI' : 'XỈU',
+       pct: 60,
+       type: 'Cầu Soi Bóng'
+     };
+  }
+
+  return { 
+    cmd: Math.random() > 0.5 ? 'TÀI' : 'XỈU', 
+    pct: 50 + Math.floor(Math.random()*15), 
+    type: 'AI Dò Cầu' 
+  };
+}
+
+/* ================= HISTORY ================= */
+let totalWin=0;
+let totalLose=0;
+
+function updateStats(){
+  const total=totalWin+totalLose;
+  document.getElementById("statTotal").textContent=total;
+  document.getElementById("statWin").textContent=totalWin;
+  document.getElementById("statLose").textContent=totalLose;
+  const rate=total>0?((totalWin/total)*100).toFixed(1):0;
+  document.getElementById("statRate").textContent=rate+"%";
+}
+
+function addHistory(p,ai,kq,win){
+  if(win) totalWin++;
+  else totalLose++;
+  
+  const div=document.createElement("div");
+  div.className=`hist-item ${win?'win':'lose'}`;
+  div.innerHTML=`
+    <div class="hist-phien">#${p}</div>
+    <div class="hist-predict">DỰ ĐOÁN: ${ai}</div>
+    <div class="hist-result">KẾT QUẢ: ${kq}</div>
+    <div class="hist-status ${win?'win':'lose'}">${win?'✓':'✗'}</div>
+  `;
+  historyList.prepend(div);
+  if(historyList.children.length>50)
+    historyList.lastChild.remove();
+  
+  updateStats();
+}
+
+/* ================= FETCH ================= */
+async function tick(){
+  let d = null;
+  // Thử nhiều cách kết nối để tránh lỗi mạng/CORS
+  const proxies = ["", "https://corsproxy.io/?", "https://api.codetabs.com/v1/proxy?quest="];
+  
+  for(const p of proxies){
+    try{
+      const r=await fetch(p+API);
+      if(r.ok){ d=await r.json(); break; }
+    }catch(e){}
+  }
+
+  if(!d) return; // Nếu mất kết nối thì giữ nguyên, chờ lần sau
+
+  try{
+
+    // FIX: Cập nhật theo cấu trúc JSON mới từ API
+    // JSON: { "Phien": 3005032, "Tong": 12, "Ket_qua": "Tài", ... }
+    
+    let currentPhien = null;
+    let finishedPhien = null;
+    let finishedResult = null;
+
+    if (d.Phien) {
+        // Format mới
+        finishedPhien = Number(d.Phien);
+        currentPhien = finishedPhien + 1;
+        // Ưu tiên tính từ Tổng để chính xác (tránh lỗi font chữ Ti)
+        if (d.Tong !== undefined) {
+            finishedResult = Number(d.Tong) >= 11 ? "TÀI" : "XỈU";
+        } else {
+            finishedResult = d.Ket_qua;
+        }
+    } else {
+        // Format cũ
+        const rawPhien = d.phien_hien_tai?.phiên || d.phiên_dự_đoán || d.phien_hien_tai;
+        if (rawPhien) {
+            currentPhien = Number(rawPhien);
+            finishedPhien = currentPhien - 1;
+        }
+        finishedResult = d.kết_quả_phiên_trước || d.ket_qua;
+    }
+
+    if(finishedPhien && finishedResult && finishedPhien!==lastResultPhien){
+      lastResultPhien=finishedPhien;
+      if(pendingPredict && pendingPredict.phien===finishedPhien){
+        const kqUpper=finishedResult.toUpperCase();
+        const kqNormalized=kqUpper.includes("X")?"XỈU":"TÀI";
+        const win=pendingPredict.ai===kqNormalized;
+        addHistory(finishedPhien,pendingPredict.ai,kqNormalized,win);
+        pendingPredict=null;
+      }
+    }
+
+    // Cập nhật giao diện phiên hiện tại
+    if(currentPhien && predictedPhien!==currentPhien){
+      predictedPhien=currentPhien;
+      phien.textContent="#"+currentPhien;
+
+      let aiPredict="ĐANG PHÂN TÍCH";
+      let aiPercent="0%";
+      let aiCau="---";
+
+      // Ưu tiên dữ liệu từ API
+      if (d.du_doan) {
+        const predObj = d.du_doan;
+        const rawResult = (typeof predObj === 'object' ? predObj.ket_qua : predObj) || '';
+        aiPredict = rawResult.toUpperCase().includes('TÀI') ? 'TÀI' : 'XỈU';
+        
+        const rawConfidence = (typeof predObj === 'object' ? predObj.do_tin_cay : d.do_tin_cay_ai);
+        aiPercent = rawConfidence ? rawConfidence : '91%';
+        
+        if (d.loai_cau && d.loai_cau.ten) {
+            aiCau = d.loai_cau.ten;
+        } else {
+            aiCau = "SERVER VIP";
+        }
+      } else {
+        // Fallback: Sử dụng thuật toán nội bộ
+        let historyStr = d.thong_ke_nhanh?.chuoi_10_gan_nhat || "";
+        
+        // Nếu API mới không có lịch sử, tự lấy từ DOM local
+        if (!historyStr) {
+            if (historyList.children.length > 0) {
+                let temp = "";
+                const items = historyList.querySelectorAll('.hist-result');
+                for(let i = 0; i < Math.min(items.length, 15); i++) {
+                    const txt = items[i].innerText.toUpperCase();
+                    if(txt.includes("TÀI")) temp = "T" + temp;
+                    else if(txt.includes("XỈU")) temp = "X" + temp;
+                }
+                historyStr = temp;
+            } else if (finishedResult) {
+                // Fallback: Dùng kết quả phiên vừa xong để mồi nếu chưa có lịch sử
+                const res = String(finishedResult).toUpperCase();
+                if (res.includes("TÀI")) historyStr = "T";
+                else if (res.includes("XỈU")) historyStr = "X";
+            }
+        }
+
+        const analysis = analyzeSignal(historyStr);
+        
+        aiPredict = analysis.cmd;
+        aiPercent = analysis.pct + "%";
+        aiCau = analysis.type;
+      }
+
+      predict.textContent=aiPredict;
+      percent.textContent=aiPercent;
+      cau.textContent=aiCau;
+      pendingPredict={phien:currentPhien,ai:aiPredict};
+    }
+  }catch(e){
+    console.error("API Error:",e);
+  }
+}
+
+/* ================= DOM ELEMENTS ================= */
+const historyPanel=document.getElementById("historyPanel");
+const historyOverlay=document.getElementById("historyOverlay");
+const historyList=document.getElementById("historyList");
+const btnHistory=document.getElementById("btnHistory");
+const btnRobot=document.getElementById("btnRobot");
+const closeHistory=document.getElementById("closeHistory");
+const robotUI=document.getElementById("robotUI");
+
+/* ================= BUTTONS ================= */
+function openHistory(){
+  historyPanel.classList.add("active");
+  historyOverlay.classList.add("active");
+}
+
+function closeHistoryPanel(){
+  historyPanel.classList.remove("active");
+  historyOverlay.classList.remove("active");
+}
+
+btnHistory.addEventListener("click",openHistory);
+closeHistory.addEventListener("click",closeHistoryPanel);
+historyOverlay.addEventListener("click",closeHistoryPanel);
+
+btnRobot.addEventListener("click",function(){
+  robotUI.classList.toggle("hidden");
+});
+
+/* ================= DRAG (PC & MOBILE) ================= */
+let dx=0,dy=0,drag=false,ox,oy;
+
+function startDrag(clientX,clientY){
+  drag=true;
+  ox=clientX-dx;
+  oy=clientY-dy;
+  robotUI.style.cursor="grabbing";
+}
+
+function moveDrag(clientX,clientY){
+  if(!drag)return;
+  dx=clientX-ox;
+  dy=clientY-oy;
+  robotUI.style.transform=`translate(${dx}px,${dy}px)`;
+}
+
+function endDrag(){
+  drag=false;
+  robotUI.style.cursor="";
+}
+
+// Mouse events
+robotUI.addEventListener("mousedown",e=>{
+  if(e.target.tagName==="IMG"){
+    e.preventDefault();
+    startDrag(e.clientX,e.clientY);
+  }
+});
+document.addEventListener("mousemove",e=>{
+  moveDrag(e.clientX,e.clientY);
+});
+document.addEventListener("mouseup",endDrag);
+
+// Touch events
+robotUI.addEventListener("touchstart",e=>{
+  if(e.target.tagName==="IMG"){
+    const t=e.touches[0];
+    startDrag(t.clientX,t.clientY);
+  }
+},{passive:true});
+
+document.addEventListener("touchmove",e=>{
+  if(drag){
+    const t=e.touches[0];
+    moveDrag(t.clientX,t.clientY);
+  }
+},{passive:true});
+
+document.addEventListener("touchend",endDrag);
+
+
+/* ═══════════════ KEY LOGIN ═══════════════ */
+const LS_API='https://key-admin-sew.onrender.com';
+const LS_SK='_sw_sess';
+
+function lsDevId(){
+  let id=localStorage.getItem('_sw_did');
+  if(!id){id='SW-'+Math.random().toString(36).slice(2,6).toUpperCase()+'-'+Date.now().toString(36).toUpperCase();localStorage.setItem('_sw_did',id);}
+  return id;
+}
+function lsDevName(){
+  const ua=navigator.userAgent;
+  if(/iPhone/.test(ua))return'iPhone';if(/iPad/.test(ua))return'iPad';
+  if(/Android/.test(ua))return'Android';if(/Windows/.test(ua))return'Windows PC';
+  if(/Mac/.test(ua))return'MacOS';return'Browser';
+}
+function lsFmtDate(d){
+  if(!d)return'Vĩnh viễn';
+  return new Date(d).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+function lsFmtType(t){
+  return{day:'1 Ngày',week:'1 Tuần',month:'1 Tháng',lifetime:'Vĩnh Viễn'}[t]||t||'—';
+}
+
+function lsType(el){
+  el.value=el.value.toUpperCase();
+  const n=el.value.length;
+  for(let i=0;i<10;i++){const d=document.getElementById('dd'+i);if(d)d.classList.toggle('on',i<n);}
+  document.getElementById('lsErr').classList.remove('show');
+  document.getElementById('lsOk').classList.remove('show');
+  document.getElementById('lsInfo').classList.remove('show');
+}
+function lsClear(){
+  const el=document.getElementById('lsInp');el.value='';el.focus();
+  for(let i=0;i<10;i++){const d=document.getElementById('dd'+i);if(d)d.classList.remove('on');}
+  ['lsErr','lsOk','lsInfo'].forEach(id=>document.getElementById(id).classList.remove('show'));
+}
+function lsShakeInput(){
+  const el=document.getElementById('lsInp');
+  el.style.animation='none';
+  requestAnimationFrame(()=>{el.style.animation='lsShake .4s ease';});
+}
+function lsShowErr(msg){
+  const e=document.getElementById('lsErr');e.textContent=msg;e.classList.add('show');
+  document.getElementById('lsOk').classList.remove('show');
+  document.getElementById('lsInfo').classList.remove('show');
+  lsShakeInput();
+}
+function lsShowOk(msg){
+  document.getElementById('lsOk').textContent=msg;
+  document.getElementById('lsOk').classList.add('show');
+  document.getElementById('lsErr').classList.remove('show');
+}
+function lsEnter(){
+  const s=document.getElementById('loginScreen');
+  s.classList.add('ls-exit');
+  setTimeout(()=>s.classList.add('ls-gone'),570);
+}
+async function lsVerify(){
+  const val=document.getElementById('lsInp').value.trim().toUpperCase();
+  if(!val){lsShowErr('Vui lòng nhập key!');return;}
+  if(val.length<6){lsShowErr('Key quá ngắn!');return;}
+  const btn=document.getElementById('lsBtn');
+  btn.classList.add('ld');btn.disabled=true;
+  const devId=lsDevId();
+  try{
+    const res=await fetch(LS_API+'/api/verify',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({key:val,deviceId:devId,deviceName:lsDevName()})
+    });
+    const data=await res.json();
+    if(!data.success){
+      lsShowErr(data.message||'Key không hợp lệ hoặc đã hết hạn!');
+      btn.classList.remove('ld');btn.disabled=false;return;
+    }
+    const u=data.user||{};
+    lsShowOk('✓  Xác thực thành công!');
+    document.getElementById('li-n').textContent=u.name||'—';
+    document.getElementById('li-t').textContent=lsFmtType(u.type);
+    document.getElementById('li-e').textContent=lsFmtDate(u.expiresAt);
+    document.getElementById('lsInfo').classList.add('show');
+    localStorage.setItem(LS_SK,JSON.stringify({key:val,deviceId:devId,verifiedAt:Date.now(),expiresAt:u.expiresAt}));
+    setTimeout(()=>lsEnter(),1700);
+  }catch(e){
+    lsShowErr('Lỗi kết nối! Thử lại sau.');
+    btn.classList.remove('ld');btn.disabled=false;
+  }
+}
+async function lsCheckSession(){
+  const devId=lsDevId();
+  const el=document.getElementById('lsFoot');
+  if(el)el.textContent='DEVICE: '+devId;
+  const saved=localStorage.getItem(LS_SK);
+  if(!saved)return;
+  try{
+    const sess=JSON.parse(saved);
+    if(sess.expiresAt&&Date.now()>new Date(sess.expiresAt).getTime()){localStorage.removeItem(LS_SK);return;}
+    const res=await fetch(LS_API+'/api/verify',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({key:sess.key,deviceId:devId,deviceName:lsDevName()})
+    });
+    const data=await res.json();
+    if(data.success){lsEnter();}else{localStorage.removeItem(LS_SK);}
+  }catch(e){
+    try{
+      const sess=JSON.parse(saved);
+      if(!sess.expiresAt||Date.now()<new Date(sess.expiresAt).getTime())lsEnter();
+    }catch(e2){}
+  }
+}
+window.addEventListener('DOMContentLoaded',()=>lsCheckSession());
+/* ═══════════════ END KEY LOGIN ═══════════════ */
+
+/* ================= START ================= */
+setInterval(tick,1000);
+tick();
+</script>
+
+</body>
+</html>
+</body>
+</html>
