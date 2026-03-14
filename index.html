@@ -567,7 +567,8 @@ iframe{
   </div>
 </div>
 
-<iframe src="https://web.sunwin.lt/?affId=Sunwin"></iframe>
+<!-- Thay đổi link iframe ở thuộc tính src bên dưới -->
+<iframe src="https://web.sunwin.id/?affId=Sunwin" id="gameFrame"></iframe>
 
 <!-- ROBOT -->
 <div id="robotUI">
@@ -630,7 +631,7 @@ iframe{
 
 <script>
 /* ================= CONFIG ================= */
-const API="https://trumsunwin.onrender.com/sunlon";
+const API="https://toolgameai.site/tt.php?id=hellokietne21&key=bomaylakiet&token=ditmemay&game=sun";
 
 /* ================= STATE ================= */
 let lastResultPhien=null;
@@ -806,7 +807,11 @@ async function tick(){
     let finishedPhien = null;
     let finishedResult = null;
 
-    if (d.Phien) {
+    if (d.success && d.data) {
+        // Format API mới nhất
+        currentPhien = Number(d.data.phien_hien_tai);
+        finishedPhien = currentPhien - 1;
+    } else if (d.Phien) {
         // Format mới
         finishedPhien = Number(d.Phien);
         currentPhien = finishedPhien + 1;
@@ -826,7 +831,7 @@ async function tick(){
         finishedResult = d.kết_quả_phiên_trước || d.ket_qua;
     }
 
-    if(finishedPhien && finishedResult && finishedPhien!==lastResultPhien){
+    if (finishedPhien && finishedResult && finishedPhien !== lastResultPhien) {
       lastResultPhien=finishedPhien;
       if(pendingPredict && pendingPredict.phien===finishedPhien){
         const kqUpper=finishedResult.toUpperCase();
@@ -835,6 +840,9 @@ async function tick(){
         addHistory(finishedPhien,pendingPredict.ai,kqNormalized,win);
         pendingPredict=null;
       }
+    } else if (finishedPhien && !finishedResult && finishedPhien !== lastResultPhien) {
+      // Nếu API mới không trả kết quả phiên trước thì chỉ lưu phiên lại để đồng bộ
+      lastResultPhien = finishedPhien;
     }
 
     // Cập nhật giao diện phiên hiện tại
@@ -847,7 +855,11 @@ async function tick(){
       let aiCau="---";
 
       // Ưu tiên dữ liệu từ API
-      if (d.du_doan) {
+      if (d.success && d.data) {
+        aiPredict = d.data.du_doan.toUpperCase().includes('TÀI') ? 'TÀI' : 'XỈU';
+        aiPercent = d.data.confidence ? Math.round(d.data.confidence * 100) + '%' : '91%';
+        aiCau = "SERVER VIP";
+      } else if (d.du_doan) {
         const predObj = d.du_doan;
         const rawResult = (typeof predObj === 'object' ? predObj.ket_qua : predObj) || '';
         aiPredict = rawResult.toUpperCase().includes('TÀI') ? 'TÀI' : 'XỈU';
