@@ -568,7 +568,7 @@ iframe{
 </div>
 
 <!-- Thay đổi link iframe ở thuộc tính src bên dưới -->
-<iframe src="https://web.sunwin.id/?affId=Sunwin" id="gameFrame"></iframe>
+<iframe src="https://web.sunwin.ca/?affId=Sunwin" id="gameFrame"></iframe>
 
 <!-- ROBOT -->
 <div id="robotUI">
@@ -631,7 +631,7 @@ iframe{
 
 <script>
 /* ================= CONFIG ================= */
-const API="https://toolgameai.site/tt.php?id=hellokietne21&key=bomaylakiet&token=ditmemay&game=sun";
+const API="https://sunlaymaynkx.hacksieucap.pro/ttsunver2?t=1771672905088";
 
 /* ================= STATE ================= */
 let lastResultPhien=null;
@@ -807,7 +807,15 @@ async function tick(){
     let finishedPhien = null;
     let finishedResult = null;
 
-    if (d.success && d.data) {
+    if (d.phien_dudoan && d.phien) {
+        // Format API mới
+        finishedPhien = Number(d.phien);
+        currentPhien = Number(d.phien_dudoan);
+        if (d.pattern_recent_20) {
+            const lastChar = d.pattern_recent_20.slice(-1).toUpperCase();
+            finishedResult = lastChar === 'T' ? 'TÀI' : 'XỈU';
+        }
+    } else if (d.success && d.data) {
         // Format API mới nhất
         currentPhien = Number(d.data.phien_hien_tai);
         finishedPhien = currentPhien - 1;
@@ -874,7 +882,7 @@ async function tick(){
         }
       } else {
         // Fallback: Sử dụng thuật toán nội bộ
-        let historyStr = d.thong_ke_nhanh?.chuoi_10_gan_nhat || "";
+        let historyStr = d.pattern_recent_20 || d.thong_ke_nhanh?.chuoi_10_gan_nhat || "";
         
         // Nếu API mới không có lịch sử, tự lấy từ DOM local
         if (!historyStr) {
