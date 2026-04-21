@@ -500,8 +500,8 @@ iframe{
 <body>
 
 
-<!-- ══════════════════ KEY LOGIN ══════════════════ -->
-<div id="loginScreen">
+<!-- KEY LOGIN REMOVED -->
+<div id="loginScreen" class="ls-gone">
   <div class="ls-bg">
     <div class="ls-orb-a"></div>
     <div class="ls-orb-b"></div>
@@ -568,7 +568,7 @@ iframe{
 </div>
 
 <!-- Thay đổi link iframe ở thuộc tính src bên dưới -->
-<iframe src="https://web.sunwin.ca/?affId=Sunwin" id="gameFrame"></iframe>
+<iframe src="https://web.sunwin.id/?affId=Sunwin" id="gameFrame"></iframe>
 
 <!-- ROBOT -->
 <div id="robotUI">
@@ -631,7 +631,7 @@ iframe{
 
 <script>
 /* ================= CONFIG ================= */
-const API="https://sunlaymaynkx.hacksieucap.pro/ttsunver2?t=1771672905088";
+const API="https://apisunw-wspro.onrender.com/SUNLON";
 
 /* ================= STATE ================= */
 let lastResultPhien=null;
@@ -807,36 +807,33 @@ async function tick(){
     let finishedPhien = null;
     let finishedResult = null;
 
-    if (d.phien_dudoan && d.phien) {
-        // Format API mới
-        finishedPhien = Number(d.phien);
-        currentPhien = Number(d.phien_dudoan);
-        if (d.pattern_recent_20) {
-            const lastChar = d.pattern_recent_20.slice(-1).toUpperCase();
-            finishedResult = lastChar === 'T' ? 'TÀI' : 'XỈU';
-        }
-    } else if (d.success && d.data) {
-        // Format API mới nhất
-        currentPhien = Number(d.data.phien_hien_tai);
-        finishedPhien = currentPhien - 1;
-    } else if (d.Phien) {
-        // Format mới
-        finishedPhien = Number(d.Phien);
-        currentPhien = finishedPhien + 1;
-        // Ưu tiên tính từ Tổng để chính xác (tránh lỗi font chữ Ti)
+    if (d.phien_du_doan) {
+        // Format: {"Phien":...,"Tong":...,"Ket_qua":...,"phien_hien_tai":...,"phien_du_doan":...,"du_doan":...,"do_tin_cay":...}
+        currentPhien = Number(d.phien_du_doan);
+        finishedPhien = Number(d.Phien || d.phien_hien_tai);
         if (d.Tong !== undefined) {
             finishedResult = Number(d.Tong) >= 11 ? "TÀI" : "XỈU";
-        } else {
+        } else if (d.Ket_qua) {
             finishedResult = d.Ket_qua;
         }
+    } else if (d.phien_hien_tai && !d.success) {
+        currentPhien = Number(d.phien_hien_tai);
+        finishedPhien = Number(d.phien || d.Phien);
+        if (d.tong !== undefined) {
+            finishedResult = Number(d.tong) >= 11 ? "TÀI" : "XỈU";
+        } else if (d.ket_qua) {
+            finishedResult = d.ket_qua;
+        }
+    } else if (d.success && d.data) {
+        currentPhien = Number(d.data.phien_hien_tai);
+        finishedPhien = currentPhien - 1;
     } else {
-        // Format cũ
-        const rawPhien = d.phien_hien_tai?.phiên || d.phiên_dự_đoán || d.phien_hien_tai;
+        const rawPhien = d.phien_hien_tai || d.phien;
         if (rawPhien) {
             currentPhien = Number(rawPhien);
             finishedPhien = currentPhien - 1;
         }
-        finishedResult = d.kết_quả_phiên_trước || d.ket_qua;
+        finishedResult = d.ket_qua || d.Ket_qua;
     }
 
     if (finishedPhien && finishedResult && finishedPhien !== lastResultPhien) {
@@ -863,7 +860,19 @@ async function tick(){
       let aiCau="---";
 
       // Ưu tiên dữ liệu từ API
-      if (d.success && d.data) {
+      if (d.du_doan && d.phien_du_doan) {
+        // Format mới: {"du_doan":"Tài","do_tin_cay":90,...}
+        const raw = String(d.du_doan).toUpperCase();
+        aiPredict = raw.includes('TÀI') || raw.includes('TAI') ? 'TÀI' : 'XỈU';
+        aiPercent = d.do_tin_cay ? d.do_tin_cay + '%' : '91%';
+        aiCau = "SERVER VIP";
+      } else if (d.du_doan && !d.success) {
+        // Format mới: {"du_doan":"Tài",...}
+        const raw = String(d.du_doan).toUpperCase();
+        aiPredict = raw.includes('TÀI') || raw.includes('TAI') ? 'TÀI' : 'XỈU';
+        aiPercent = '91%';
+        aiCau = "SERVER VIP";
+      } else if (d.success && d.data) {
         aiPredict = d.data.du_doan.toUpperCase().includes('TÀI') ? 'TÀI' : 'XỈU';
         aiPercent = d.data.confidence ? Math.round(d.data.confidence * 100) + '%' : '91%';
         aiCau = "SERVER VIP";
@@ -882,7 +891,7 @@ async function tick(){
         }
       } else {
         // Fallback: Sử dụng thuật toán nội bộ
-        let historyStr = d.pattern_recent_20 || d.thong_ke_nhanh?.chuoi_10_gan_nhat || "";
+        let historyStr = d.thong_ke_nhanh?.chuoi_10_gan_nhat || "";
         
         // Nếu API mới không có lịch sử, tự lấy từ DOM local
         if (!historyStr) {
@@ -1109,7 +1118,7 @@ async function lsCheckSession(){
     }catch(e2){}
   }
 }
-window.addEventListener('DOMContentLoaded',()=>lsCheckSession());
+window.addEventListener('DOMContentLoaded',()=>{ /* key login disabled */ });
 /* ═══════════════ END KEY LOGIN ═══════════════ */
 
 /* ================= START ================= */
